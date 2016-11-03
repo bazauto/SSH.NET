@@ -167,6 +167,17 @@ namespace Renci.SshNet
         /// <param name="path">Remote host file name.</param>
         public void Upload(Stream source, string path)
         {
+            Upload(source, path, true);
+        }
+
+        /// <summary>
+        /// Uploads the specified stream to the remote host.
+        /// </summary>
+        /// <param name="source">Stream to upload.</param>
+        /// <param name="path">Remote host file name.</param>
+        /// <param name="includeQuotes">Whether or not to include quotes around the filename.</param>
+        public void Upload(Stream source, string path, bool includeQuotes)
+        {
             using (var input = ServiceFactory.CreatePipeStream())
             using (var channel = Session.CreateChannelSession())
             {
@@ -180,7 +191,10 @@ namespace Renci.SshNet
                     var pathOnly = path.Substring(0, pathEnd);
                     var fileOnly = path.Substring(pathEnd + 1);
                     //  Send channel command request
-                    channel.SendExecRequest(string.Format("scp -t \"{0}\"", pathOnly));
+                    if (includeQuotes)
+                        channel.SendExecRequest(string.Format("scp -t \"{0}\"", pathOnly));
+                    else
+                        channel.SendExecRequest(string.Format("scp -t {0}", pathOnly));
                     CheckReturnCode(input);
 
                     path = fileOnly;
@@ -203,6 +217,23 @@ namespace Renci.SshNet
         /// </remarks>
         public void Download(string filename, Stream destination)
         {
+            Download(filename, destination, true);
+        }
+
+        /// <summary>
+        /// Downloads the specified file from the remote host to the stream.
+        /// </summary>
+        /// <param name="filename">Remote host file name.</param>
+        /// <param name="destination">The stream where to download remote file.</param>
+        /// <param name="includeQuotes">Whether or not to include quotes around the filename.</param>
+        /// <exception cref="ArgumentException"><paramref name="filename"/> is <c>null</c> or contains only whitespace characters.</exception>
+        /// <exception cref="ArgumentNullException"><paramref name="destination"/> is <c>null</c>.</exception>
+        /// <remarks>
+        /// Method calls made by this method to <paramref name="destination"/>, may under certain conditions result
+        /// in exceptions thrown by the stream.
+        /// </remarks>
+        public void Download(string filename, Stream destination, bool includeQuotes)
+        {
             if (filename.IsNullOrWhiteSpace())
                 throw new ArgumentException("filename");
 
@@ -216,7 +247,10 @@ namespace Renci.SshNet
                 channel.Open();
 
                 //  Send channel command request
-                channel.SendExecRequest(string.Format("scp -f \"{0}\"", filename));
+                if (includeQuotes)
+                    channel.SendExecRequest(string.Format("scp -f \"{0}\"", filename));
+                else
+                    channel.SendExecRequest(string.Format("scp -f {0}", filename));
                 SendConfirmation(channel); //  Send reply
 
                 var message = ReadString(input);
